@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OK Alone — Quote Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--navy:#043950;--orange:#ffb422;--teal:#06bea9;--bg:#f0f5f7;--lgrey:#e3eef1;--mgrey:#5f6465;--white:#fff;--red:#e74c3c;--green:#27ae60}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--navy);line-height:1.5}
+
+/* Lock Screen */
+#lockScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999}
+#lockScreen.hidden{display:none}
+.lock-box{background:#fff;border-radius:12px;padding:40px;text-align:center;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.lock-box .lock-logo{width:60px;height:60px;background:var(--orange);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:var(--navy);margin-bottom:16px}
+.lock-box h1{font-size:20px;color:var(--navy);margin-bottom:4px}
+.lock-box h1 span{color:var(--orange)}
+.lock-box p{font-size:13px;color:var(--mgrey);margin-bottom:20px}
+.lock-box input{width:100%;padding:12px 16px;border:2px solid var(--lgrey);border-radius:8px;font-size:15px;text-align:center;margin-bottom:12px;letter-spacing:1px}
+.lock-box input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(6,190,169,.15)}
+.lock-box button{width:100%;padding:12px;background:var(--orange);color:var(--navy);border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s}
+.lock-box button:hover{background:#e6a21f}
+.lock-box .lock-err{color:var(--red);font-size:12px;font-weight:600;margin-top:8px;min-height:18px}
+#appContent{display:none}
+
+/* Header */
+.hdr{background:var(--navy);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-i{width:38px;height:38px;background:var(--orange);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:var(--navy)}
+.logo-t{color:var(--white);font-size:18px;font-weight:700}.logo-t span{color:var(--orange)}
+.logo-s{color:var(--teal);font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase}
+
+/* Buttons */
+.btn{padding:9px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.btn-p{background:var(--orange);color:var(--navy)}.btn-p:hover{background:#e6a21f}
+.btn-s{background:var(--teal);color:#fff}.btn-s:hover{background:#05a899}
+.btn-o{background:transparent;color:#fff;border:2px solid var(--teal)}.btn-o:hover{background:var(--teal);color:#fff}
+.btn-d{background:var(--red);color:#fff;font-size:11px;padding:4px 10px}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* Layout */
+.wrap{max-width:1100px;margin:0 auto;padding:20px}
+.card{background:#fff;border-radius:9px;padding:24px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--lgrey)}
+.stitle{font-size:14px;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--orange);display:flex;align-items:center;gap:7px}
+.stitle .n{background:var(--orange);color:var(--navy);width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+
+/* Forms */
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.fi{display:flex;flex-direction:column;gap:3px}
+.fi.fw{grid-column:1/-1}
+label{font-size:11px;font-weight:600;color:var(--mgrey);text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{padding:8px 10px;border:1.5px solid var(--lgrey);border-radius:5px;font-size:13px;color:var(--navy);font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 2px rgba(6,190,169,.1)}
+textarea{resize:vertical;min-height:60px}
+
+/* Line Items Table */
+.litbl{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+.litbl th{background:var(--orange);color:var(--navy);padding:8px 10px;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:left;white-space:nowrap}
+.litbl th:last-child,.litbl td:last-child{text-align:right}
+.litbl td{padding:7px 10px;border-bottom:1px solid var(--lgrey);vertical-align:middle}
+.litbl tr:hover td{background:#f8fbfc}
+.litbl .cat-row td{background:var(--bg);font-weight:700;font-size:12px;padding:6px 10px;color:var(--navy)}
+
+/* Discount inline */
+.disc-group{display:flex;align-items:center;gap:4px}
+.disc-group select{width:44px;padding:4px;font-size:12px;text-align:center}
+.disc-group input{width:64px;padding:4px 6px;font-size:12px;text-align:right}
+.disc-group span{font-size:11px;color:var(--mgrey)}
+
+/* Totals bar */
+.tbar{background:var(--navy);border-radius:9px;padding:16px 24px;margin-bottom:16px;display:flex;justify-content:space-around;align-items:center;flex-wrap:wrap;gap:14px}
+.tbar-i{text-align:center}
+.tbar-l{font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.tbar-v{font-size:22px;font-weight:800;color:#fff;margin-top:1px}
+.tbar-v.hl{color:var(--orange)}
+
+/* Actions */
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Sharing box */
+.share-box{background:#e8f7f5;border:1px solid var(--teal);border-radius:8px;padding:14px 18px;margin-bottom:16px}
+.share-box h3{font-size:13px;color:var(--navy);margin-bottom:6px}
+.share-box p{font-size:12px;color:var(--mgrey);line-height:1.6}
+
+/* Options tabs */
+.opt-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.opt-tab{padding:7px 16px;border-radius:6px 6px 0 0;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--lgrey);border-bottom:none;background:#fff;color:var(--mgrey);transition:all .2s}
+.opt-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.opt-tab .star{color:var(--orange);margin-left:4px;cursor:pointer;font-size:14px}
+.opt-tab .star.off{opacity:.3}
+
+@media(max-width:768px){.wrap{padding:10px}.card{padding:14px}.fg{grid-template-columns:1fr}.tbar{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<!-- Lock Screen -->
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-logo">OK</div>
+    <h1>OK <span>Alone</span></h1>
+    <p>Quote Builder — Internal Use Only</p>
+    <form onsubmit="return unlockApp()">
+      <input type="password" id="lockPwd" placeholder="Enter team password" autofocus>
+      <button type="submit">Unlock</button>
+    </form>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
+<div id="appContent">
+<header class="hdr">
+  <div class="logo">
+    <div class="logo-i">OK</div>
+    <div><div class="logo-t">OK <span>Alone</span></div><div class="logo-s">Quote Builder</div></div>
+  </div>
+  <div class="actions">
+    <button class="btn btn-o btn-sm" onclick="resetAll()">Reset</button>
+    <button class="btn btn-p" onclick="generatePDF()">&#9660; Generate PDF</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Sharing Info -->
+  <div class="share-box">
+    <h3>How to share this tool with your team</h3>
+    <p>This is a single HTML file — no installs needed. Just share the file via <strong>email, Slack, Google Drive, OneDrive, or SharePoint</strong>. Anyone who opens it in a browser (Chrome, Edge, Safari) can build and export quotes immediately. No internet required after the first load.</p>
+  </div>
+
+  <!-- Summary Bar -->
+  <div class="tbar">
+    <div class="tbar-i"><div class="tbar-l">Licenses</div><div class="tbar-v" id="tLic">0</div></div>
+    <div class="tbar-i"><div class="tbar-l">Monthly</div><div class="tbar-v hl" id="tMo">$0</div></div>
+    <div class="tbar-i"><div class="tbar-l">Annual</div><div class="tbar-v hl" id="tAn">$0</div></div>
+    <div class="tbar-i"><div class="tbar-l">Contract Value</div><div class="tbar-v" id="tCv">$0</div></div>
+  </div>
+
+  <!-- Section 1: Client Info -->
+  <div class="card">
+    <div class="stitle"><span class="n">1</span> Client & Deal Info</div>
+    <div class="fg">
+      <div class="fi"><label>Client Company</label><input id="cCo" placeholder="e.g. AECOM"></div>
+      <div class="fi"><label>Contact Name</label><input id="cNm" placeholder="e.g. Sarah Johnson"></div>
+      <div class="fi"><label>Contact Title</label><input id="cTi" placeholder="e.g. VP of Safety"></div>
+      <div class="fi"><label>Prepared By</label><input id="cBy" value="Xavier Braham"></div>
+      <div class="fi"><label>Prepared By Email</label><input id="cEm" value="Xavier.braham@ok-alone.com"></div>
+      <div class="fi"><label>Quote Date</label><input type="date" id="cDt"></div>
+      <div class="fi"><label>Valid For</label>
+        <select id="cVl"><option value="30" selected>30 Days</option><option value="60">60 Days</option><option value="90">90 Days</option></select>
+      </div>
+      <div class="fi"><label>Agreement Term</label>
+        <select id="cTm" onchange="recalc()"><option value="monthly">Monthly (Rolling)</option><option value="1" selected>1 Year</option><option value="2">2 Years</option><option value="3">3 Years</option></select>
+      </div>
+      <div class="fi"><label>Currency</label>
+        <select id="cCur" onchange="recalc()"><option value="CAD" selected>CAD ($)</option><option value="USD">USD ($)</option><option value="GBP">GBP (&pound;)</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Options & Line Items -->
+  <div class="card">
+    <div class="stitle"><span class="n">2</span> Pricing Line Items</div>
+
+    <!-- Option Tabs -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="opt-tabs" id="optTabs"></div>
+      <button class="btn btn-s btn-sm" onclick="addOption()" id="addBtn">+ Add Option</button>
+    </div>
+
+    <!-- Line Items for Active Option -->
+    <div id="optContent"></div>
+  </div>
+
+  <!-- Section 3: Notes & Generate -->
+  <div class="card">
+    <div class="stitle"><span class="n">3</span> Notes & Generate</div>
+    <div class="fi fw" style="margin-bottom:16px">
+      <label>Quote Notes (appear at bottom of PDF)</label>
+      <textarea id="cNotes" placeholder="e.g. All prices in CAD. Quote valid for 30 days. Deployment includes guided setup and admin training."></textarea>
+    </div>
+    <div style="text-align:center">
+      <button class="btn btn-p" onclick="generatePDF()" style="font-size:15px;padding:12px 36px">&#128196; Generate PDF Quote</button>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /appContent -->
+
+<script>
+/* ═══════════════════════════════════════
+   PASSWORD GATE
+   ═══════════════════════════════════════ */
+const _h = '2dfea4a53cc427e6861212eb15e88cceb62529de7357462b9a8db125289bbd73';
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function unlockApp() {
+  const pwd = document.getElementById('lockPwd').value;
+  const hash = await sha256(pwd);
+  if (hash === _h) {
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('appContent').style.display = 'block';
+    sessionStorage.setItem('cpq_unlocked', '1');
+  } else {
+    document.getElementById('lockErr').textContent = 'Incorrect password. Try again.';
+    document.getElementById('lockPwd').value = '';
+    document.getElementById('lockPwd').focus();
+  }
+  return false;
+}
+// Stay unlocked for the browser session
+if (sessionStorage.getItem('cpq_unlocked') === '1') {
+  document.getElementById('lockScreen').classList.add('hidden');
+  document.getElementById('appContent').style.display = 'block';
+}
+
+/* ═══════════════════════════════════════
+   OK ALONE CPQ — V2 (AECOM FORMAT)
+   ═══════════════════════════════════════ */
+
+const TIERS = {
+  essential: { name:'Essential Protection', base:10 },
+  automated: { name:'Automated Monitoring', base:15 },
+  emergency: { name:'24/7 Emergency Response', base:20 }
+};
+
+const ADDON_CATALOG = [
+  { id:'satellite', name:'Satellite Mode (ZOLEO)', base:8, unit:'device', perUser:false },
+  { id:'sso',       name:'SSO / SAML',            base:3, unit:'worker', perUser:true },
+  { id:'apiStd',    name:'API Integration — Standard', base:200, unit:'account', perUser:false },
+  { id:'apiPro',    name:'API Integration — Pro',      base:500, unit:'account', perUser:false },
+  { id:'custom',    name:'Custom Integration',         base:200, unit:'account', perUser:false, setup:2500 }
+];
+
+// ── State ──
+let opts = [];
+let activeOpt = 0;
+let idCounter = 0;
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('cDt').value = new Date().toISOString().split('T')[0];
+  addOption();
+});
+
+function addOption() {
+  if (opts.length >= 3) return;
+  const id = ++idCounter;
+  const labels = ['Option A','Option B','Option C'];
+  const defTier = ['essential','automated','emergency'];
+  const idx = opts.length;
+  opts.push({
+    id, label: labels[idx], recommended: idx === 0,
+    lines: [
+      { type:'sub', tier: defTier[idx] || 'essential', qty:50, discType:'%', discVal:0, desc:'' }
+    ]
+  });
+  activeOpt = opts.length - 1;
+  render();
+}
+
+function removeOption(idx) {
+  if (opts.length <= 1) return;
+  opts.splice(idx, 1);
+  if (activeOpt >= opts.length) activeOpt = opts.length - 1;
+  if (!opts.some(o => o.recommended)) opts[0].recommended = true;
+  render();
+}
+
+function setActive(idx) { activeOpt = idx; render(); }
+
+function toggleRec(idx, e) {
+  e.stopPropagation();
+  opts.forEach((o, i) => o.recommended = (i === idx));
+  render();
+}
+
+// ── Line Item Management ──
+function addSubLine() {
+  opts[activeOpt].lines.push({ type:'sub', tier:'automated', qty:50, discType:'%', discVal:0, desc:'' });
+  render();
+}
+function addAddonLine() {
+  opts[activeOpt].lines.push({ type:'addon', addonId:'satellite', qty:10, discType:'%', discVal:0, desc:'' });
+  render();
+}
+function addSetupLine() {
+  // Auto-calculate implementation fee: 35% if monthly > $500, 15% if <= $500
+  const opt = opts[activeOpt];
+  let monthlyTotal = 0;
+  opt.lines.forEach(line => { if (line.type !== 'setup') monthlyTotal += calcLine(line).monthly; });
+  const implPct = monthlyTotal > 500 ? 35 : 15;
+  const annualTotal = monthlyTotal * 12;
+  const implFee = Math.round(annualTotal * implPct / 100 * 100) / 100;
+  opts[activeOpt].lines.push({ type:'setup', desc:'One Time Setup, Onboarding, and Training Fee (' + implPct + '%)', amount:implFee, discType:'%', discVal:0 });
+  render();
+}
+function removeLine(li) {
+  opts[activeOpt].lines.splice(li, 1);
+  render();
+}
+function updateLine(li, field, val) {
+  opts[activeOpt].lines[li][field] = val;
+  recalc();
+}
+
+// ── Calculation ──
+function sym() { return document.getElementById('cCur').value === 'GBP' ? '£' : '$'; }
+function termMonths() { const t = document.getElementById('cTm').value; return t === 'monthly' ? 1 : parseInt(t) * 12; }
+function termLabel() { const t = document.getElementById('cTm').value; return t === 'monthly' ? 'Monthly (Rolling)' : t + ' Year' + (t > 1 ? 's' : ''); }
+
+function calcLine(line) {
+  const months = termMonths();
+  if (line.type === 'sub') {
+    const base = TIERS[line.tier]?.base || 10;
+    const qty = Math.max(1, parseInt(line.qty) || 1);
+    let unitPrice = base;
+    if (line.discType === '%' && line.discVal > 0) {
+      unitPrice = base * (1 - line.discVal / 100);
+    } else if (line.discType === '$' && line.discVal > 0) {
+      unitPrice = base - line.discVal;
+    }
+    unitPrice = Math.max(0, Math.round(unitPrice * 100) / 100);
+    const monthly = unitPrice * qty;
+    const annual = monthly * 12;
+    const contract = monthly * months;
+    return { unitPrice, qty, monthly, annual, contract, name: TIERS[line.tier]?.name || '', base };
+  }
+  if (line.type === 'addon') {
+    const addon = ADDON_CATALOG.find(a => a.id === line.addonId) || ADDON_CATALOG[0];
+    const qty = Math.max(1, parseInt(line.qty) || 1);
+    let unitPrice = addon.base;
+    if (line.discType === '%' && line.discVal > 0) {
+      unitPrice = addon.base * (1 - line.discVal / 100);
+    } else if (line.discType === '$' && line.discVal > 0) {
+      unitPrice = addon.base - line.discVal;
+    }
+    unitPrice = Math.max(0, Math.round(unitPrice * 100) / 100);
+    const effectiveQty = addon.perUser ? qty : (addon.unit === 'account' ? 1 : qty);
+    const monthly = unitPrice * effectiveQty;
+    const annual = monthly * 12;
+    const contract = monthly * months;
+    const setup = addon.setup || 0;
+    return { unitPrice, qty, effectiveQty, monthly, annual, contract: contract + setup, setup, name: addon.name, base: addon.base, unit: addon.unit, perUser: addon.perUser };
+  }
+  if (line.type === 'setup') {
+    let amount = parseFloat(line.amount) || 0;
+    if (line.discType === '%' && line.discVal > 0) {
+      amount = amount * (1 - line.discVal / 100);
+    } else if (line.discType === '$' && line.discVal > 0) {
+      amount = amount - line.discVal;
+    }
+    amount = Math.max(0, Math.round(amount * 100) / 100);
+    return { amount, contract: amount, name: line.desc || 'Setup Fee', monthly: 0, annual: 0 };
+  }
+  return { monthly:0, annual:0, contract:0 };
+}
+
+function calcOptionTotals(opt) {
+  let totalLic = 0, totalMo = 0, totalAn = 0, totalCv = 0;
+  opt.lines.forEach(line => {
+    const c = calcLine(line);
+    if (line.type === 'sub') totalLic += c.qty;
+    totalMo += c.monthly;
+    totalAn += c.annual;
+    totalCv += c.contract;
+  });
+  return { totalLic, totalMo, totalAn, totalCv };
+}
+
+function recalc() {
+  // Update summary bar from recommended option
+  const rec = opts.find(o => o.recommended) || opts[0];
+  if (!rec) return;
+  const t = calcOptionTotals(rec);
+  const s = sym();
+  document.getElementById('tLic').textContent = t.totalLic.toLocaleString();
+  document.getElementById('tMo').textContent = s + fmt(t.totalMo);
+  document.getElementById('tAn').textContent = s + fmt(t.totalAn);
+  document.getElementById('tCv').textContent = s + fmt(t.totalCv);
+
+  // Update inline totals
+  const opt = opts[activeOpt];
+  if (!opt) return;
+  opt.lines.forEach((line, li) => {
+    const c = calcLine(line);
+    const el = document.getElementById('lt_' + li);
+    if (el) el.textContent = s + fmt(line.type === 'setup' ? c.amount : c.annual);
+    const up = document.getElementById('up_' + li);
+    if (up) up.textContent = s + (c.unitPrice !== undefined ? c.unitPrice.toFixed(2) : '—');
+    const mo = document.getElementById('mo_' + li);
+    if (mo) mo.textContent = s + fmt(c.monthly);
+  });
+  // Update option total row
+  const ot = calcOptionTotals(opt);
+  const otEl = document.getElementById('optTotal');
+  if (otEl) otEl.innerHTML = `
+    <td colspan="4" style="text-align:right;font-weight:700;background:var(--navy);color:#fff;border-radius:0 0 0 6px">Total Contract Value</td>
+    <td style="font-weight:700;font-size:14px;background:var(--navy);color:var(--orange);border-radius:0 0 6px 0">${s}${fmt(ot.totalCv)}</td>`;
+}
+
+function fmt(n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+// ── Render ──
+function render() {
+  // Tabs
+  const tabs = document.getElementById('optTabs');
+  tabs.innerHTML = opts.map((o, i) =>
+    `<div class="opt-tab ${i === activeOpt ? 'active' : ''}" onclick="setActive(${i})">
+      ${o.label}
+      <span class="star ${o.recommended ? '' : 'off'}" onclick="toggleRec(${i}, event)" title="Set as recommended">★</span>
+      ${opts.length > 1 ? `<span style="margin-left:6px;opacity:.5;font-size:11px;cursor:pointer" onclick="event.stopPropagation();removeOption(${i})" title="Remove">✕</span>` : ''}
+    </div>`
+  ).join('');
+  document.getElementById('addBtn').style.display = opts.length >= 3 ? 'none' : '';
+
+  // Content
+  const opt = opts[activeOpt];
+  const s = sym();
+  let html = `
+    <div class="fi" style="max-width:280px;margin-bottom:12px">
+      <label>Option Label</label>
+      <input value="${opt.label}" oninput="opts[${activeOpt}].label=this.value;document.querySelectorAll('.opt-tab')[${activeOpt}].childNodes[0].textContent=this.value+' '">
+    </div>
+    <table class="litbl">
+      <thead><tr>
+        <th style="width:30%">Line Item</th>
+        <th style="width:10%">Qty</th>
+        <th style="width:22%">Discount</th>
+        <th style="width:14%">Unit Price</th>
+        <th style="width:18%">Annual Amount</th>
+        <th style="width:6%"></th>
+      </tr></thead>
+      <tbody>`;
+
+  // Group: Subscriptions
+  const subs = opt.lines.filter(l => l.type === 'sub');
+  const addons = opt.lines.filter(l => l.type === 'addon');
+  const setups = opt.lines.filter(l => l.type === 'setup');
+
+  if (subs.length > 0) {
+    html += `<tr class="cat-row"><td colspan="6">Subscriptions</td></tr>`;
+    subs.forEach((line, _si) => {
+      const li = opt.lines.indexOf(line);
+      const c = calcLine(line);
+      const tierOpts = Object.entries(TIERS).map(([k, v]) => `<option value="${k}" ${line.tier === k ? 'selected' : ''}>${v.name}</option>`).join('');
+      html += buildLineRow(li, line, c, `<select onchange="updateLine(${li},'tier',this.value)" style="font-size:12px;padding:4px">${tierOpts}</select>`,
+        `<input type="number" min="1" value="${line.qty}" onchange="updateLine(${li},'qty',parseInt(this.value)||1)" style="width:70px;text-align:center;font-size:12px;padding:4px">`);
+    });
+  }
+
+  if (addons.length > 0) {
+    html += `<tr class="cat-row"><td colspan="6">Add-Ons</td></tr>`;
+    addons.forEach((line) => {
+      const li = opt.lines.indexOf(line);
+      const c = calcLine(line);
+      const addonOpts = ADDON_CATALOG.map(a => `<option value="${a.id}" ${line.addonId === a.id ? 'selected' : ''}>${a.name}</option>`).join('');
+      const addon = ADDON_CATALOG.find(a => a.id === line.addonId) || ADDON_CATALOG[0];
+      const qtyLabel = addon.unit === 'account' ? '1 acct' : '';
+      html += buildLineRow(li, line, c, `<select onchange="updateLine(${li},'addonId',this.value)" style="font-size:12px;padding:4px">${addonOpts}</select>`,
+        addon.unit === 'account' ? `<span style="font-size:12px;color:var(--mgrey)">1 acct</span>` :
+        `<input type="number" min="1" value="${line.qty}" onchange="updateLine(${li},'qty',parseInt(this.value)||1)" style="width:70px;text-align:center;font-size:12px;padding:4px">`);
+    });
+  }
+
+  if (setups.length > 0) {
+    html += `<tr class="cat-row"><td colspan="6">Setup & One-Time Fees</td></tr>`;
+    setups.forEach((line) => {
+      const li = opt.lines.indexOf(line);
+      const c = calcLine(line);
+      html += `<tr>
+        <td><input value="${line.desc}" onchange="updateLine(${li},'desc',this.value)" style="width:100%;font-size:12px;padding:4px;border:1.5px solid var(--lgrey);border-radius:4px" placeholder="Description"></td>
+        <td><input type="number" min="0" step="100" value="${line.amount}" onchange="updateLine(${li},'amount',parseFloat(this.value)||0)" style="width:90px;text-align:right;font-size:12px;padding:4px"></td>
+        <td>${buildDiscountInput(li, line)}</td>
+        <td id="up_${li}" style="font-size:12px;color:var(--mgrey)">—</td>
+        <td id="lt_${li}" style="font-weight:600">${s}${fmt(c.amount)}</td>
+        <td><button class="btn-d" onclick="removeLine(${li})">✕</button></td>
+      </tr>`;
+    });
+  }
+
+  // Totals row
+  const ot = calcOptionTotals(opt);
+  html += `<tr id="optTotal" style="font-size:14px">
+    <td colspan="4" style="text-align:right;font-weight:700;background:var(--navy);color:#fff;border-radius:0 0 0 6px">Total Contract Value</td>
+    <td style="font-weight:700;font-size:14px;background:var(--navy);color:var(--orange);border-radius:0 0 6px 0">${s}${fmt(ot.totalCv)}</td>
+    <td style="background:var(--navy)"></td>
+  </tr>`;
+
+  html += `</tbody></table>`;
+
+  // Add line buttons
+  html += `<div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn btn-s btn-sm" onclick="addSubLine()">+ Subscription</button>
+    <button class="btn btn-s btn-sm" onclick="addAddonLine()">+ Add-On</button>
+    <button class="btn btn-s btn-sm" onclick="addSetupLine()">+ Setup Fee</button>
+  </div>`;
+
+  document.getElementById('optContent').innerHTML = html;
+  recalc();
+}
+
+function buildLineRow(li, line, c, nameInput, qtyInput) {
+  const s = sym();
+  return `<tr>
+    <td>${nameInput}</td>
+    <td>${qtyInput}</td>
+    <td>${buildDiscountInput(li, line)}</td>
+    <td id="up_${li}" style="font-size:12px">${c.unitPrice !== undefined ? s + c.unitPrice.toFixed(2) : '—'}</td>
+    <td id="lt_${li}" style="font-weight:600">${s}${fmt(line.type === 'setup' ? c.amount : c.annual)}</td>
+    <td><button class="btn-d" onclick="removeLine(${li})">✕</button></td>
+  </tr>`;
+}
+
+function buildDiscountInput(li, line) {
+  return `<div class="disc-group">
+    <select onchange="updateLine(${li},'discType',this.value)">
+      <option value="%" ${line.discType==='%'?'selected':''}>%</option>
+      <option value="$" ${line.discType==='$'?'selected':''}>$</option>
+    </select>
+    <input type="number" min="0" step="0.5" value="${line.discVal}" onchange="updateLine(${li},'discVal',parseFloat(this.value)||0)">
+    <span>off</span>
+  </div>`;
+}
+
+function resetAll() {
+  if (!confirm('Reset everything?')) return;
+  document.getElementById('cCo').value = '';
+  document.getElementById('cNm').value = '';
+  document.getElementById('cTi').value = '';
+  document.getElementById('cNotes').value = '';
+  opts = []; idCounter = 0; activeOpt = 0;
+  addOption();
+}
+
+/* ═══════════════════════════════════════
+   PDF GENERATION — AECOM FORMAT (2 pages max)
+   ═══════════════════════════════════════ */
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const W = 210, H = 297, M = 16, CW = W - 2*M;
+  const s = sym();
+
+  const NAVY = [4,57,80], ORANGE = [255,180,34], TEAL = [6,190,169];
+  const GREY = [95,100,101], LIGHT = [245,247,249], WHITE = [255,255,255], BLACK = [30,30,30];
+
+  function setC(c) { doc.setTextColor(c[0],c[1],c[2]); }
+  function setF(c) { doc.setFillColor(c[0],c[1],c[2]); }
+  function setD(c) { doc.setDrawColor(c[0],c[1],c[2]); }
+
+  // ── HELPER: Draw page header (compact) ──
+  function drawPageHeader() {
+    // Orange top bar
+    setF(ORANGE); doc.rect(0, 0, W, 3, 'F');
+    // Left: company info
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    setC(NAVY); doc.text('OK', M, 12);
+    setC(ORANGE); doc.text('Alone', M + 11, 12);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    setC(GREY);
+    doc.text('Suite 300-848 Courtney Street, Victoria, BC V8W 1C4', M, 16);
+    doc.text('www.okaloneworker.com', M, 19.5);
+    // Right: prepared by
+    doc.setFont('helvetica','bold'); doc.setFontSize(8);
+    setC(NAVY); doc.text('Quote Completed By', W - M, 10, { align:'right' });
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    setC(GREY);
+    doc.text(document.getElementById('cBy').value, W - M, 14, { align:'right' });
+    doc.text(document.getElementById('cEm').value, W - M, 18, { align:'right' });
+    // Divider
+    setF(ORANGE); doc.rect(M, 22, CW, 0.8, 'F');
+    return 27;
+  }
+
+  // ── HELPER: Draw page footer ──
+  function drawPageFooter() {
+    const fy = H - 12;
+    doc.setFontSize(6); setC(GREY); doc.setFont('helvetica','normal');
+    doc.text('Peoplesafe Personal Safety Limited trading as OK Alone  |  Incorporated in BC no. BC1436640  |  Suite 300-848 Courtney Street, Victoria, BC, Canada, V8W 1C4', W/2, fy, { align:'center' });
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); setC(ORANGE);
+    doc.text('PUTTING PEOPLE AT THE HEART OF SAFETY', W/2, fy + 4, { align:'center' });
+  }
+
+  // ── HELPER: Draw table ──
+  function drawTable(headers, rows, x, startY, colWidths) {
+    let y = startY;
+    const rowH = 7;
+    // Header
+    setF(ORANGE);
+    doc.rect(x, y, colWidths.reduce((a,b)=>a+b,0), rowH, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7);
+    setC(WHITE);
+    let cx = x;
+    headers.forEach((h, i) => {
+      const align = i >= headers.length - 2 ? 'right' : 'left';
+      const tx = align === 'right' ? cx + colWidths[i] - 2 : cx + 2;
+      doc.text(h, tx, y + 5, { align });
+      cx += colWidths[i];
+    });
+    y += rowH;
+
+    // Data rows
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    rows.forEach((row, ri) => {
+      if (ri % 2 === 0) { setF(LIGHT); doc.rect(x, y, colWidths.reduce((a,b)=>a+b,0), rowH, 'F'); }
+      cx = x;
+      setC(BLACK);
+      row.forEach((cell, i) => {
+        const align = i >= headers.length - 2 ? 'right' : 'left';
+        const tx = align === 'right' ? cx + colWidths[i] - 2 : cx + 2;
+        doc.text(String(cell), tx, y + 5, { align });
+        cx += colWidths[i];
+      });
+      y += rowH;
+    });
+    // Bottom border
+    setD(ORANGE); doc.setLineWidth(0.3);
+    doc.line(x, y, x + colWidths.reduce((a,b)=>a+b,0), y);
+    return y + 2;
+  }
+
+  // ── HELPER: Draw total box ──
+  function drawTotalBox(label, value, x, y, w) {
+    setF(NAVY);
+    doc.roundedRect(x, y, w, 9, 1, 1, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    setC(WHITE); doc.text(label, x + 4, y + 6);
+    setC(ORANGE); doc.text(value, x + w - 4, y + 6, { align:'right' });
+    return y + 12;
+  }
+
+  // ══════════════════════
+  // BUILD PDF
+  // ══════════════════════
+  let y = drawPageHeader();
+
+  // Quote title
+  doc.setFont('helvetica','bold'); doc.setFontSize(22);
+  setC(NAVY); doc.text('Quote', M, y + 4);
+  y += 10;
+
+  // Client name
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  setC(NAVY); doc.text(document.getElementById('cCo').value || 'Client', M, y + 2);
+  y += 8;
+
+  // Date & attention
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  setC(GREY);
+  const dt = document.getElementById('cDt').value;
+  const dateStr = dt ? new Date(dt + 'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : '';
+  doc.text(dateStr, M, y);
+  y += 5;
+  const contact = document.getElementById('cNm').value;
+  const title = document.getElementById('cTi').value;
+  if (contact) { doc.text('Attention: ' + contact + (title ? ', ' + title : ''), M, y); y += 5; }
+  doc.text('Agreement Term: ' + termLabel(), M, y); y += 7;
+
+  // ── Render each option ──
+  const pageBreakThreshold = H - 50; // leave room for footer + notes
+
+  opts.forEach((opt, oi) => {
+    // Check if we need a page break
+    if (y > pageBreakThreshold) {
+      drawPageFooter();
+      doc.addPage();
+      y = drawPageHeader();
+    }
+
+    // Option header
+    if (opts.length > 1) {
+      doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      setC(NAVY); doc.text(opt.label + (opt.recommended ? '  ★ Recommended' : ''), M, y);
+      y += 6;
+    }
+
+    const subs = opt.lines.filter(l => l.type === 'sub');
+    const addons = opt.lines.filter(l => l.type === 'addon');
+    const setups = opt.lines.filter(l => l.type === 'setup');
+
+    // Subscription table
+    if (subs.length > 0) {
+      const headers = ['SUBSCRIPTION', 'CONTRACT (MO)', '# WORKERS', 'DISCOUNT', 'UNIT PRICE (/mo)', 'ANNUAL AMOUNT'];
+      const colW = [42, 22, 18, 22, 30, CW - 134];
+      const rows = subs.map(line => {
+        const c = calcLine(line);
+        const discStr = line.discVal > 0 ? (line.discType === '%' ? line.discVal + '%' : s + line.discVal.toFixed(2)) : '—';
+        return [c.name, String(termMonths()), String(c.qty), discStr, s + c.unitPrice.toFixed(2), s + fmt(c.annual)];
+      });
+      y = drawTable(headers, rows, M, y, colW);
+    }
+
+    // Add-ons table
+    if (addons.length > 0) {
+      const headers = ['ADD-ON', 'QTY', 'DISCOUNT', 'UNIT PRICE (/mo)', 'ANNUAL AMOUNT'];
+      const colW = [50, 18, 22, 36, CW - 126];
+      const rows = addons.map(line => {
+        const c = calcLine(line);
+        const addon = ADDON_CATALOG.find(a => a.id === line.addonId) || ADDON_CATALOG[0];
+        const qtyStr = addon.unit === 'account' ? '1 acct' : String(line.qty);
+        const discStr = line.discVal > 0 ? (line.discType === '%' ? line.discVal + '%' : s + line.discVal.toFixed(2)) : '—';
+        return [c.name, qtyStr, discStr, s + c.unitPrice.toFixed(2), s + fmt(c.annual)];
+      });
+      y = drawTable(headers, rows, M, y, colW);
+    }
+
+    // Setup / one-time fees
+    if (setups.length > 0) {
+      const headers = ['DESCRIPTION', 'DISCOUNT', 'AMOUNT'];
+      const colW = [CW - 60, 24, 36];
+      const rows = setups.map(line => {
+        const c = calcLine(line);
+        const discStr = line.discVal > 0 ? (line.discType === '%' ? line.discVal + '%' : s + line.discVal.toFixed(2)) : '—';
+        return [c.name, discStr, s + fmt(c.amount)];
+      });
+      y = drawTable(headers, rows, M, y, colW);
+    }
+
+    // Option totals
+    const ot = calcOptionTotals(opt);
+    // Summary rows
+    const summaryItems = [
+      ['Monthly Total', s + fmt(ot.totalMo)],
+      ['Annual Total', s + fmt(ot.totalAn)]
+    ];
+    doc.setFontSize(8);
+    summaryItems.forEach(([lbl, val]) => {
+      doc.setFont('helvetica','normal'); setC(GREY);
+      doc.text(lbl + ':', W - M - 50, y + 1);
+      doc.setFont('helvetica','bold'); setC(NAVY);
+      doc.text(val, W - M, y + 1, { align:'right' });
+      y += 5;
+    });
+
+    // Total contract value box
+    y = drawTotalBox('Total Contract Value', s + fmt(ot.totalCv), M + CW/2, y, CW/2);
+    y += 4;
+  });
+
+  // ── Notes ──
+  const notes = document.getElementById('cNotes').value;
+  if (notes) {
+    if (y > pageBreakThreshold) { drawPageFooter(); doc.addPage(); y = drawPageHeader(); }
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    setC(NAVY); doc.text('Notes', M, y);
+    y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    setC(GREY);
+    const lines = doc.splitTextToSize(notes, CW);
+    doc.text(lines, M, y);
+    y += lines.length * 4 + 4;
+  }
+
+  // Validity
+  if (y > H - 30) { drawPageFooter(); doc.addPage(); y = drawPageHeader(); }
+  const expiry = getExpiry();
+  doc.setFont('helvetica','italic'); doc.setFontSize(8); setC(GREY);
+  doc.text('This quote is valid until ' + expiry + '. All prices shown in ' + document.getElementById('cCur').value + '.', M, y);
+  y += 4;
+  doc.text('Licensing: Every person in the system requires one license regardless of role (monitor, worker, or both).', M, y);
+
+  drawPageFooter();
+
+  // ── Save ──
+  const cn = (document.getElementById('cCo').value || 'Client').replace(/[^a-zA-Z0-9]/g, '_');
+  const ds = (document.getElementById('cDt').value || '').replace(/-/g, '');
+  doc.save('OK_Alone_Quote_' + cn + '_' + ds + '.pdf');
+}
+
+function getExpiry() {
+  const dt = document.getElementById('cDt').value;
+  const days = parseInt(document.getElementById('cVl').value);
+  if (!dt) return '';
+  const d = new Date(dt + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+}
+</script>
+</body>
+</html>
