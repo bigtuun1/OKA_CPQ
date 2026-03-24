@@ -914,9 +914,23 @@ function addSchedule1Page(doc, s1Data) {
   function setC(c) { doc.setTextColor(c[0],c[1],c[2]); }
   function sigLine(x, yy, w) { doc.setDrawColor(0,0,0); doc.setLineWidth(0.3); doc.line(x, yy, x + w, yy); }
 
-  // Helper: print wrapped text block, returns new y
+  // Helper: start a new continuation page with header
+  function newContPage() {
+    doc.addPage(); drawFooter();
+    var ny = M;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.setTextColor(4,57,80);
+    doc.text('SCHEDULE 1 (continued)', M, ny);
+    doc.setDrawColor(4,57,80); doc.setLineWidth(0.4);
+    doc.line(M, ny + 2, M + CW, ny + 2);
+    ny += 10;
+    return ny;
+  }
+
+  // Helper: print wrapped text block with widow/orphan control, returns new y
   function printBlock(str, x, yy, opts) {
     opts = opts || {};
+    var MIN_LINES = 3; // minimum lines to keep together (widow/orphan)
     const font = opts.bold ? 'bold' : 'normal';
     const size = opts.size || FS;
     const indent = opts.indent || 0;
@@ -925,11 +939,51 @@ function addSchedule1Page(doc, s1Data) {
     doc.setFontSize(size);
     setC(opts.color || BLACK);
     const lines = doc.splitTextToSize(str, width);
+
+    // Widow/orphan control: if block has 3+ lines but only 1-2 fit
+    // on current page, push entire block to next page
+    var linesRemaining = Math.floor((FOOTER_Y - 8 - yy) / LH);
+    if (lines.length >= MIN_LINES && linesRemaining > 0 && linesRemaining < MIN_LINES) {
+      yy = newContPage();
+      doc.setFont('helvetica', font);
+      doc.setFontSize(size);
+      setC(opts.color || BLACK);
+    }
+
     for (let i = 0; i < lines.length; i++) {
-      if (yy > FOOTER_Y - 8) { doc.addPage(); drawFooter(); yy = M; doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(4,57,80); doc.text('SCHEDULE 1 (continued)', M, yy); doc.setDrawColor(4,57,80); doc.setLineWidth(0.4); doc.line(M, yy + 2, M + CW, yy + 2); yy += 10; doc.setFont('helvetica', font); doc.setFontSize(size); setC(opts.color || BLACK); }
+      if (yy > FOOTER_Y - 8) {
+        yy = newContPage();
+        doc.setFont('helvetica', font);
+        doc.setFontSize(size);
+        setC(opts.color || BLACK);
+      }
       doc.text(lines[i], x + indent, yy);
       yy += LH;
     }
+    return yy;
+  }
+
+  // Helper: print a numbered clause -- keeps number + first lines of body on same page
+  function printClause(num, bodyStr, x, yy, bodyOpts) {
+    bodyOpts = bodyOpts || {};
+    var indent = bodyOpts.indent || 10;
+    var bFont = bodyOpts.bold ? 'bold' : 'normal';
+    var bSize = bodyOpts.size || FS;
+    // Measure body lines
+    doc.setFont('helvetica', bFont); doc.setFontSize(bSize);
+    var bodyWidth = bodyOpts.width || (CW - indent);
+    var bodyLines = doc.splitTextToSize(bodyStr, bodyWidth);
+    // Need at least 1 (number) + min(3, bodyLines) lines on page
+    var needed = Math.min(3, bodyLines.length) + 1;
+    var linesAvail = Math.floor((FOOTER_Y - 8 - yy) / LH);
+    if (linesAvail > 0 && linesAvail < needed) {
+      yy = newContPage();
+    }
+    // Print number
+    yy = printBlock(num + '.', x, yy, { bold: true });
+    yy -= LH;
+    // Print body
+    yy = printBlock(bodyStr, x, yy, bodyOpts);
     return yy;
   }
 
@@ -940,12 +994,12 @@ function addSchedule1Page(doc, s1Data) {
     doc.text('Peoplesafe Personal Safety Limited trading as OK Alone | Suite 300-848 Courtney Street, Victoria, BC, Canada, V8W 1C4', W/2, H - 8, { align:'center' });
   }
 
-  // ── PAGE START ──
+  // -- PAGE START --
   doc.addPage();
   let y = M;
   drawFooter();
 
-  // ── TITLE ──
+  // -- TITLE --
   doc.setFont('helvetica','bold'); doc.setFontSize(16);
   setC(NAVY);
   doc.text('SCHEDULE 1', M, y);
@@ -954,11 +1008,11 @@ function addSchedule1Page(doc, s1Data) {
   doc.line(M, y, M + CW, y);
   y += SS;
 
-  // ── EFFECTIVE DATE ──
+  // -- EFFECTIVE DATE --
   y = printBlock('THIS SCHEDULE 1 is dated ' + s1Data.effectiveDate + ' (the "Effective Date").', M, y, {});
   y += PS;
 
-  // ── BETWEEN ──
+  // -- BETWEEN --
   y = printBlock('BETWEEN:', M, y, { bold: true });
   y += 2;
   y = printBlock('Peoplesafe Personal Safety Ltd. ("PPS"), a company incorporated under the laws of British Columbia, which has its registered office located at Suite 300-848 Courtney Street, Victoria, BC, V8W 1C4', M, y, { indent: 8 });
@@ -969,11 +1023,11 @@ function addSchedule1Page(doc, s1Data) {
   y = printBlock(s1Data.coLegal + ', a company incorporated in ' + s1Data.prov + ', which has its registered address located at ' + s1Data.addr + ' (herein referred to as "You" and/or "Your" as applicable)', M, y, { indent: 8 });
   y += PS;
 
-  // ── PARTIES LINE ──
+  // -- PARTIES LINE --
   y = printBlock('Each of PPS and You being a "Party", and together the "Parties".', M, y, {});
   y += PS;
 
-  // ── AGREEMENT REFERENCE ──
+  // -- AGREEMENT REFERENCE --
   y = printBlock('This document is a Schedule 1 which forms part of the Agreement between You and PPS for Your use of the Website owned or operated by PPS, Your use of any Services provided by PPS and Your use of any Software developed by PPS.', M, y, {});
   y += PS;
 
@@ -982,7 +1036,7 @@ function addSchedule1Page(doc, s1Data) {
   y = printBlock('https://www.okaloneworker.com/work-alone-monitoring-terms/', M, y, { color: NAVY });
   y += SS;
 
-  // ── WHEREAS ──
+  // -- WHEREAS --
   y = printBlock('WHEREAS:', M, y, { bold: true, size: 11 });
   y += PS - 2;
   y = printBlock('1.  You wish to have price certainty for a ' + s1Data.term + ' month period; and', M, y, { indent: 4 });
@@ -990,81 +1044,67 @@ function addSchedule1Page(doc, s1Data) {
   y = printBlock('2.  PPS wishes to provide its services to You.', M, y, { indent: 4 });
   y += SS;
 
-  // ── NOW THEREFORE ──
+  // -- NOW THEREFORE --
   y = printBlock('NOW THEREFORE', M, y, { bold: true, size: 11 });
   y += PS - 2;
   y = printBlock('In consideration of the terms and conditions contained herein, and for the good and valuable consideration as set out in the Agreement and in this Schedule 1, the receipt and sufficiency of which is hereby acknowledged by the Parties, the Parties agree as follows:', M, y, {});
   y += SS;
 
-  // ── NUMBERED TERMS ──
+  // -- NUMBERED TERMS --
   let clauseNum = 1;
   const hasSetup = parseFloat(s1Data.setup) > 0;
 
   // Term 1 - Subscription
-  y = printBlock(clauseNum + '.', M, y, { bold: true });
-  y -= LH;
-  y = printBlock('You agree to subscribe to the OK Alone ' + s1Data.plan + ' (the "Plan") for an initial term of ' + s1Data.term + ' months from the Effective Date.', M, y, { indent: 10 });
+  y = printClause(clauseNum, 'You agree to subscribe to the OK Alone ' + s1Data.plan + ' (the "Plan") for an initial term of ' + s1Data.term + ' months from the Effective Date.', M, y, { indent: 10 });
   y += PS;
   clauseNum++;
 
   // Term 2 - Pricing
-  y = printBlock(clauseNum + '.', M, y, { bold: true });
-  y -= LH;
-  y = printBlock('You agree to pay ' + s1Data.curr + ' ' + s1Data.price + ' per Worker per month, exclusive of applicable taxes, for the Plan for the initial term. Payments will be made ' + s1Data.payFreq + '.', M, y, { indent: 10 });
+  y = printClause(clauseNum, 'You agree to pay ' + s1Data.curr + ' ' + s1Data.price + ' per Worker per month, exclusive of applicable taxes, for the Plan for the initial term. Payments will be made ' + s1Data.payFreq + '.', M, y, { indent: 10 });
   y += PS;
   clauseNum++;
 
   // Term 3 - Min Users
-  y = printBlock(clauseNum + '.', M, y, { bold: true });
-  y -= LH;
-  y = printBlock('Minimum Number of Users: ' + s1Data.minUsers + '.', M, y, { indent: 10 });
+  y = printClause(clauseNum, 'Minimum Number of Users: ' + s1Data.minUsers + '.', M, y, { indent: 10 });
   y += PS;
   clauseNum++;
 
   // Term 4 (conditional) - Setup Fee
   if (hasSetup) {
-    y = printBlock(clauseNum + '.', M, y, { bold: true });
-    y -= LH;
-    y = printBlock('You agree to pay ' + s1Data.curr + ' ' + s1Data.setup + ', exclusive of applicable taxes, as a one-off upfront set-up fee.', M, y, { indent: 10 });
+    y = printClause(clauseNum, 'You agree to pay ' + s1Data.curr + ' ' + s1Data.setup + ', exclusive of applicable taxes, as a one-off upfront set-up fee.', M, y, { indent: 10 });
     y += PS;
     clauseNum++;
   }
 
   // Term - Section 1.1(r) revision
-  y = printBlock(clauseNum + '.', M, y, { bold: true });
-  y -= LH;
-  y = printBlock('The definition of "Term" in Section 1.1 (r) of the Agreement shall be revised as follows:', M, y, { indent: 10 });
+  y = printClause(clauseNum, 'The definition of "Term" in Section 1.1 (r) of the Agreement shall be revised as follows:', M, y, { indent: 10 });
   y += PS - 2;
   y = printBlock('1.1 (r) "Term" means the initial term of this Agreement which is ' + s1Data.term + ' months from the Commencement Date and all subsequent Renewal Terms.', M, y, { indent: 10 });
   y += PS;
   clauseNum++;
 
   // Term - Clause 13.1 revision
-  y = printBlock(clauseNum + '.', M, y, { bold: true });
-  y -= LH;
-  y = printBlock('Clause 13.1 of the Agreement shall be revised as follows:', M, y, { indent: 10 });
+  y = printClause(clauseNum, 'Clause 13.1 of the Agreement shall be revised as follows:', M, y, { indent: 10 });
   y += PS - 2;
   y = printBlock('13.1  Upon expiry of the initial ' + s1Data.term + ' month Term or any ' + s1Data.term + ' month Renewal Term, the Term of this Agreement shall continue to automatically renew and extend for successive ' + s1Data.term + ' month periods (each, a "Renewal Term") unless terminated by written notice of termination sent by either party to the other at least 60 days prior to the expiration of the then current Term OR this Agreement is terminated under the early termination provisions of this Section 13 OR Section 21.2.1.', M, y, { indent: 10 });
   y += PS;
   clauseNum++;
 
   // Term - Clause 28(a) revision
-  y = printBlock(clauseNum + '.', M, y, { bold: true });
-  y -= LH;
-  y = printBlock('Clause 28 a) of the Agreement shall be revised as follows:', M, y, { indent: 10 });
+  y = printClause(clauseNum, 'Clause 28 a) of the Agreement shall be revised as follows:', M, y, { indent: 10 });
   y += PS - 2;
   y = printBlock('(a) PPS shall be entitled to increase or decrease Charges or Minimum Monthly Fee payable by You in any successive Renewal Term by providing 90 days notice prior to the end of the current Initial Term or Renewal Term.', M, y, { indent: 10 });
   y += SS + 4;
 
-  // ── IN WITNESS WHEREOF ──
-  if (y > FOOTER_Y - 60) { doc.addPage(); drawFooter(); y = M; doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(4,57,80); doc.text('SCHEDULE 1 (continued)', M, y); doc.setDrawColor(4,57,80); doc.setLineWidth(0.4); doc.line(M, y + 2, M + CW, y + 2); y += 10; }
+  // -- IN WITNESS WHEREOF --
+  if (y > FOOTER_Y - 60) { y = newContPage(); }
   y = printBlock('IN WITNESS WHEREOF', M, y, { bold: true, size: 11 });
   y += PS - 2;
   y = printBlock('the Parties have executed this Schedule 1 as of the Effective Date first written above.', M, y, {});
   y += SS + 4;
 
-  // ── SIGNATURE BLOCKS (side by side) ──
-  if (y > FOOTER_Y - 55) { doc.addPage(); drawFooter(); y = M; doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(4,57,80); doc.text('SCHEDULE 1 (continued)', M, y); doc.setDrawColor(4,57,80); doc.setLineWidth(0.4); doc.line(M, y + 2, M + CW, y + 2); y += 10; }
+  // -- SIGNATURE BLOCKS (side by side) --
+  if (y > FOOTER_Y - 55) { y = newContPage(); }
   const sigW = 70;
   const leftX = M;
   const rightX = M + CW/2 + 5;
