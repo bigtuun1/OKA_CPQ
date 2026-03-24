@@ -131,8 +131,8 @@ textarea{resize:vertical;min-height:60px}
       <div class="fi"><label>Client Company</label><input id="cCo" placeholder="e.g. AECOM"></div>
       <div class="fi"><label>Contact Name</label><input id="cNm" placeholder="e.g. Sarah Johnson"></div>
       <div class="fi"><label>Contact Title</label><input id="cTi" placeholder="e.g. VP of Safety"></div>
-      <div class="fi fw"><label>Company Address</label><input id="cAddr" placeholder="e.g. 123 Main St, Suite 200, Toronto, ON M5V 1A1"></div>
-      <div class="fi"><label>Province / State of Incorporation</label><input id="cProv" placeholder="e.g. Ontario"></div>
+      <div class="fi fw"><label>Company Address</label><input id="cAddr" placeholder="e.g. 123 Main St, Suite 200, Toronto, ON M5V 1A1"><div style="font-size:11px;color:var(--mgrey);margin-top:2px">Full address including state/province and zip/postal code</div></div>
+      <div class="fi"><label>Country</label><input id="cProv" placeholder="e.g. Canada"></div>
       <div class="fi"><label>Prepared By</label><input id="cBy" value="Xavier Braham"></div>
       <div class="fi"><label>Prepared By Email</label><input id="cEm" value="Xavier.braham@ok-alone.com"></div>
       <div class="fi"><label>Quote Date</label><input type="date" id="cDt"></div>
@@ -175,7 +175,7 @@ textarea{resize:vertical;min-height:60px}
         <div class="fi"><label>Price per Worker per Month</label><input type="number" id="s1Price" placeholder="e.g. 12.50" step="0.01" min="0"></div>
         <div class="fi"><label>Effective Date</label><input type="date" id="s1Date" readonly></div>
         <div class="fi"><label>Plan</label><input id="s1Plan" readonly></div>
-        <div class="fi"><label>Province / State</label><input id="s1ProvInc" readonly></div>
+        <div class="fi"><label>Country</label><input id="s1ProvInc" readonly></div>
         <div class="fi"><label>Currency</label><input id="s1Currency" readonly></div>
         <div class="fi fw"><label>Client Address</label><input id="s1Addr" readonly></div>
         <div class="fi"><label>Initial Term (months)</label><input id="s1Term" readonly></div>
@@ -966,7 +966,7 @@ function addSchedule1Page(doc, s1Data) {
 
   y = printBlock('AND:', M, y, { bold: true });
   y += 2;
-  y = printBlock(s1Data.coLegal + ', a company incorporated under the laws of ' + s1Data.prov + ', which has its registered address located at ' + s1Data.addr + ' (herein referred to as "You" and/or "Your" as applicable)', M, y, { indent: 8 });
+  y = printBlock(s1Data.coLegal + ', a company incorporated in ' + s1Data.prov + ', which has its registered address located at ' + s1Data.addr + ' (herein referred to as "You" and/or "Your" as applicable)', M, y, { indent: 8 });
   y += PS;
 
   // ── PARTIES LINE ──
