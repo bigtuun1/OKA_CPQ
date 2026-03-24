@@ -169,31 +169,19 @@ textarea{resize:vertical;min-height:60px}
     </div>
 
     <div id="s1Card" class="s1-card">
-      <div style="margin-bottom:14px;font-size:12px;color:var(--mgrey)">Configure Schedule 1 legal terms below. Fields are auto-populated where possible.</div>
+      <div style="margin-bottom:14px;font-size:12px;color:var(--mgrey)">Schedule 1 fields are auto-populated from your quote. Only <strong>Client Legal Name</strong> and <strong>Price per Worker</strong> need to be entered.</div>
       <div class="fg">
-        <div class="fi"><label>Effective Date</label><input type="date" id="s1Date"></div>
         <div class="fi"><label>Client Company Legal Name</label><input id="s1CoLegal" placeholder="e.g. AECOM Canada Ltd."></div>
-        <div class="fi"><label>Province/State of Incorporation</label><input id="s1ProvInc" placeholder="Auto-filled from above" readonly></div>
-        <div class="fi fw"><label>Client Registered Address</label><input id="s1Addr" placeholder="Auto-filled from above" readonly></div>
-        <div class="fi"><label>Plan Name</label>
-          <select id="s1Plan">
-            <option value="">Select a plan</option>
-            <option value="Essentials">Essentials</option>
-            <option value="Automated Monitoring">Automated Monitoring</option>
-            <option value="Essentials and Automated Monitoring Worker Plan">Essentials and Automated Monitoring Worker Plan</option>
-          </select>
-        </div>
-        <div class="fi"><label>Initial Term (months)</label><input type="number" id="s1Term" value="12" min="1"></div>
         <div class="fi"><label>Price per Worker per Month</label><input type="number" id="s1Price" placeholder="e.g. 12.50" step="0.01" min="0"></div>
-        <div class="fi"><label>Payment Frequency</label>
-          <select id="s1PayFreq">
-            <option value="monthly">Monthly</option>
-            <option value="annually">Annually</option>
-          </select>
-        </div>
-        <div class="fi"><label>Minimum Number of Users</label><input type="number" id="s1MinUsers" placeholder="e.g. 50" min="1"></div>
-        <div class="fi"><label>Setup Fee</label><input type="number" id="s1Setup" value="0" min="0" placeholder="0 if none"></div>
-        <div class="fi"><label>Currency</label><input id="s1Currency" placeholder="Auto-filled from quote" readonly></div>
+        <div class="fi"><label>Effective Date</label><input type="date" id="s1Date" readonly></div>
+        <div class="fi"><label>Plan</label><input id="s1Plan" readonly></div>
+        <div class="fi"><label>Province / State</label><input id="s1ProvInc" readonly></div>
+        <div class="fi"><label>Currency</label><input id="s1Currency" readonly></div>
+        <div class="fi fw"><label>Client Address</label><input id="s1Addr" readonly></div>
+        <div class="fi"><label>Initial Term (months)</label><input id="s1Term" readonly></div>
+        <div class="fi"><label>Payment Frequency</label><input id="s1PayFreq" readonly></div>
+        <div class="fi"><label>Minimum Users</label><input id="s1MinUsers" readonly></div>
+        <div class="fi"><label>Setup Fee</label><input id="s1Setup" readonly></div>
       </div>
     </div>
 
@@ -838,10 +826,48 @@ function toggleSchedule1() {
   const card = document.getElementById('s1Card');
   if (toggle) {
     card.classList.add('active');
+    // Auto-populate from quote
     document.getElementById('s1Date').value = document.getElementById('cDt').value;
     document.getElementById('s1ProvInc').value = document.getElementById('cProv').value;
     document.getElementById('s1Addr').value = document.getElementById('cAddr').value;
     document.getElementById('s1Currency').value = document.getElementById('cCur').value;
+
+    // Term: derive months from agreement term select
+    const termVal = document.getElementById('cTm').value;
+    const termMonths = termVal === 'monthly' ? '1' : (parseInt(termVal) * 12).toString();
+    document.getElementById('s1Term').value = termMonths;
+
+    // Payment frequency from term
+    document.getElementById('s1PayFreq').value = termVal === 'monthly' ? 'Monthly' : 'Annually';
+
+    // Plan name: get from recommended option's first subscription tier
+    const recOpt = opts.find(o => o.recommended) || opts[0];
+    if (recOpt) {
+      const subLine = recOpt.lines.find(l => l.type === 'sub');
+      if (subLine && TIERS[subLine.tier]) {
+        const tierNames = { essential: 'Essential', automated: 'Automated', emergency: '24/7' };
+        document.getElementById('s1Plan').value = tierNames[subLine.tier] || TIERS[subLine.tier].name;
+      }
+    }
+
+    // Min users: total subscription qty from recommended option
+    if (recOpt) {
+      let totalQty = 0;
+      recOpt.lines.forEach(l => { if (l.type === 'sub') totalQty += (parseInt(l.qty) || 0); });
+      document.getElementById('s1MinUsers').value = totalQty.toString();
+    }
+
+    // Setup fee: sum of setup lines from recommended option
+    if (recOpt) {
+      let setupTotal = 0;
+      recOpt.lines.forEach(l => {
+        if (l.type === 'setup') {
+          const calc = calcLine(l);
+          setupTotal += calc.amount || 0;
+        }
+      });
+      document.getElementById('s1Setup').value = setupTotal > 0 ? setupTotal.toFixed(2) : '0';
+    }
   } else {
     card.classList.remove('active');
   }
