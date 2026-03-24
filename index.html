@@ -13,6 +13,20 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--navy);line-height:1.5}
 
+#lockScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:9999}
+#lockScreen.hidden{display:none}
+.lock-box{background:#f8fbfc;border-radius:14px;padding:40px 36px 36px;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.lock-logo{width:48px;height:48px;margin-bottom:14px}
+.lock-logo svg{width:48px;height:48px}
+.lock-brand{font-size:20px;font-weight:700;color:var(--navy);letter-spacing:1px;margin-bottom:2px}.lock-brand span{color:var(--orange)}
+.lock-sub{font-size:9px;color:var(--mgrey);margin-bottom:6px}
+.lock-label{font-size:13px;color:var(--navy);margin-bottom:16px;font-weight:500}
+.lock-input{width:100%;padding:10px 14px;border:2px solid var(--lgrey);border-radius:8px;font-size:14px;text-align:center;margin-bottom:10px;outline:none;font-family:inherit}
+.lock-input:focus{border-color:var(--teal)}
+.lock-btn{width:100%;padding:10px;background:var(--orange);color:var(--navy);border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+.lock-btn:hover{background:#e6a21f}
+.lock-err{color:var(--red);font-size:12px;font-weight:600;margin-top:8px;min-height:18px}
+#appContent{display:none}
 .hdr{background:var(--navy);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .logo{display:flex;align-items:center;gap:12px}
 .logo-i{width:34px;height:34px;display:flex;align-items:center;justify-content:center}
@@ -71,6 +85,20 @@ textarea{resize:vertical;min-height:60px}
 </head>
 <body>
 <!-- Lock Screen -->
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-logo"><svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28 4C19.2 4 12 11.2 12 20c0 12 16 30 16 30s16-18 16-30c0-8.8-7.2-16-16-16z" fill="#FFB422"/><path d="M28 12a8 8 0 100 16 8 8 0 000-16zm0 12a4 4 0 110-8 4 4 0 010 8z" fill="#fff"/></svg></div>
+    <div class="lock-brand">OK<span>ALONE</span></div>
+    <div class="lock-sub">A Peoplesafe Company</div>
+    <div class="lock-label">Quote Builder - Internal Use Only</div>
+    <form onsubmit="return unlockApp()">
+      <input type="password" class="lock-input" id="lockPwd" placeholder="Enter team password" autofocus>
+      <button type="submit" class="lock-btn">Unlock</button>
+    </form>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
 <div id="appContent">
 <header class="hdr">
   <div class="logo">
@@ -184,6 +212,33 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <script>
+// ── Password Gate ──
+const _HASH = '5357c2b8f533cf911135978fa81ba13b09797321307438bb8694506f8f255148';
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function unlockApp() {
+  const pwd = document.getElementById('lockPwd').value;
+  const hash = await sha256(pwd);
+  if (hash === _HASH) {
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('appContent').style.display = 'block';
+    sessionStorage.setItem('cpq_unlocked', '1');
+  } else {
+    document.getElementById('lockErr').textContent = 'Incorrect password. Try again.';
+    document.getElementById('lockPwd').value = '';
+    document.getElementById('lockPwd').focus();
+  }
+  return false;
+}
+if (sessionStorage.getItem('cpq_unlocked') === '1') {
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('appContent').style.display = 'block';
+  });
+}
+
 /* âââââââââââââââââââââââââââââââââââââââ
    OK ALONE CPQ  - V2 (AECOM FORMAT)
    âââââââââââââââââââââââââââââââââââââââ */
