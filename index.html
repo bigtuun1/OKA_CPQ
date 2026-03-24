@@ -926,7 +926,7 @@ function addSchedule1Page(doc, s1Data) {
     setC(opts.color || BLACK);
     const lines = doc.splitTextToSize(str, width);
     for (let i = 0; i < lines.length; i++) {
-      if (yy > FOOTER_Y - 8) { doc.addPage(); yy = M; drawFooter(); }
+      if (yy > FOOTER_Y - 8) { doc.addPage(); drawFooter(); yy = M; doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(4,57,80); doc.text('SCHEDULE 1 (continued)', M, yy); doc.setDrawColor(4,57,80); doc.setLineWidth(0.4); doc.line(M, yy + 2, M + CW, yy + 2); yy += 10; doc.setFont('helvetica', font); doc.setFontSize(size); setC(opts.color || BLACK); }
       doc.text(lines[i], x + indent, yy);
       yy += LH;
     }
@@ -1057,14 +1057,14 @@ function addSchedule1Page(doc, s1Data) {
   y += SS + 4;
 
   // ── IN WITNESS WHEREOF ──
-  if (y > FOOTER_Y - 60) { doc.addPage(); y = M; drawFooter(); }
+  if (y > FOOTER_Y - 60) { doc.addPage(); drawFooter(); y = M; doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(4,57,80); doc.text('SCHEDULE 1 (continued)', M, y); doc.setDrawColor(4,57,80); doc.setLineWidth(0.4); doc.line(M, y + 2, M + CW, y + 2); y += 10; }
   y = printBlock('IN WITNESS WHEREOF', M, y, { bold: true, size: 11 });
   y += PS - 2;
   y = printBlock('the Parties have executed this Schedule 1 as of the Effective Date first written above.', M, y, {});
   y += SS + 4;
 
   // ── SIGNATURE BLOCKS (side by side) ──
-  if (y > FOOTER_Y - 55) { doc.addPage(); y = M; drawFooter(); }
+  if (y > FOOTER_Y - 55) { doc.addPage(); drawFooter(); y = M; doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(4,57,80); doc.text('SCHEDULE 1 (continued)', M, y); doc.setDrawColor(4,57,80); doc.setLineWidth(0.4); doc.line(M, y + 2, M + CW, y + 2); y += 10; }
   const sigW = 70;
   const leftX = M;
   const rightX = M + CW/2 + 5;
