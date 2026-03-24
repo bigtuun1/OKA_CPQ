@@ -754,6 +754,13 @@ function generatePDF() {
 
   drawPageFooter();
 
+
+  // ── Schedule 1 ──
+  const s1Data = getSchedule1Data();
+  if (s1Data) {
+    addSchedule1Page(doc, s1Data);
+  }
+
   // ââ Save ââ
   const cn = (document.getElementById('cCo').value || 'Client').replace(/[^a-zA-Z0-9]/g, '_');
   const ds = (document.getElementById('cDt').value || '').replace(/-/g, '');
